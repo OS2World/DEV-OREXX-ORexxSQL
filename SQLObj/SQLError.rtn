@@ -1,0 +1,88 @@
+/*--------------------------------------------------------------------------*/
+/*                                                                          */
+/*  ORexx/SQL Object Framework v1.0                                         */
+/*                                                                          */
+/*  Copyright (C) 1997 - 1998, John Blumel.                                 */
+/*                                                                          */
+/*  This library is free software; you can redistribute it and/or           */
+/*  modify it under the terms of the GNU Library General Public             */
+/*  License as published by the Free Software Foundation; either            */
+/*  version 2 of the License, or (at your option) any later version.        */
+/*                                                                          */
+/*  This library is distributed in the hope that it will be useful,         */
+/*  but WITHOUT ANY WARRANTY; without even the implied warranty of          */
+/*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU       */
+/*  Library General Public License for more details.                        */
+/*                                                                          */
+/*  You should have received a copy of the GNU Library General Public       */
+/*  License along with this library; if not, write to:                      */
+/*                                                                          */
+/*            Free Foundation, Inc.                                         */
+/*            59 Temple Place                                               */
+/*            Suite 330                                                     */
+/*            Boston, MA  02111-1307  USA                                   */
+/*                                                                          */
+/*  Contact: jblumel@acm.org                                                */
+/*                                                                          */
+/*  Thanks to:                                                              */
+/*    Mark Hessling for creating the Rexx/SQL interface, without which,     */
+/*      this project would literally not have been possible.                */
+/*    Rony Flatscher for sharing his ORexx expertise with me and for        */
+/*      his advice on the framework architecture.                           */
+/*                                                                          */
+/*  SQLError.rtn  -  SQLError routine                                       */
+/*                                                                          */
+/*  Requirements:                                                           */
+/*    REXXSQL library  . . . . . Rexx/SQL interface by Mark Hessling        */
+/*                                 http://www.lightlink.com/hessling/       */
+/*                                                                          */
+/*--------------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------------*/
+/* SQLError routine                                                         */
+/*   This routine is used to perform exception handling for the ORexx/SQL   */
+/* Object Framework. It takes a single parameter which is a Condition       */
+/* object. You must enable exception handling by inserting the following    */
+/* code at the beginning of your ORexx program:                             */
+/*                                                                          */
+/*     signal on SYNTAX                                                     */
+/*     signal on ERROR                                                      */
+/*     call on USER SQLError NAME SQLException                              */
+/*                                                                          */
+/* or:                                                                      */
+/*                                                                          */
+/*     signal on ANY                                                        */
+/*     call on USER SQLError NAME SQLException                              */
+/*                                                                          */
+/* and the following line at the end of your ORexx program, before any      */
+/* ::REQUIRES statements                                                    */
+/*                                                                          */
+/*     SQLException: call SQLError Condition("O")                           */
+/*                                                                          */
+/* If you wish to override the included exception handling, you can         */
+/* modify this "SQLException" routine to perform whatever processing you    */
+/* wish to occur. Errors which occur in object Init methods will, however,  */
+/* continue to be handled by the ::ROUTINE defined in the 'SQLError.rtn'    */
+/* file. You will have to modify this routine if you wish to override all   */ 
+/* exception handling.                                                      */
+/*--------------------------------------------------------------------------*/
+::ROUTINE SQLError PUBLIC
+	use arg excepObj
+
+	sqlca. = excepObj[ADDITIONAL]
+
+	say 'An exception occured in' sqlca.class
+	say 'Exception:' sqlca.exception
+	if (sqlca.intcode == -1) then do
+		say 'FUNCTION:' sqlca.function
+		say ' SQLCODE:' sqlca.sqlcode
+		say ' SQLERRM:' sqlca.sqlerrm
+		say ' SQLTEXT:' sqlca.sqltext
+	end
+	else do
+		say 'FUNCTION:' sqlca.function
+		say ' INTCODE:' sqlca.intcode
+		say ' INTERRM:' sqlca.interrm
+	end
+
+	raise ERROR 4

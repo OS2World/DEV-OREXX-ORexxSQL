@@ -1,0 +1,161 @@
+                          ORexx/SQL Object Framework
+                    Copyright (C) 1997 - 1998, John Blumel.
+                   -----------------------------------------
+
+
++ The ORexx/SQL Object Framework quick reference
+
+The following diagram shows the structure of the ORexx/SQL Object class
+hierarchy:
+
+       Classes                            
+    +----------------------------------------------------------+
+    |                                                          |
+    |  SQLObject                                               |
+    |  | | |                                                   |
+    |  | | |__ SQLConnection                                   |
+    |  | |     |                                               |
+    |  | |     |__ SQLStream                                   |
+    |  | |                                                     |
+    |  | |____ SQLWorkArea                                     |
+    |  |       | |                                             |
+    |  |       | |__ SQLTable                                  |
+    |  |       |                                               |
+    |  |       |____ SQLResultTable                            |
+    |  |                                                       |
+    |  |______ SQLStreamSupplier                               |
+    |                                                          |
+    |                                                          |
+    |  SQLError - error handling routine                       |
+    |                                                          |
+    +----------------------------------------------------------+
+    
+The ORexx/SQL Object Framework class interfaces which are likely to be 
+used most frequently are presented in a concise format below. For 
+information on specific Rexx/SQL variables and functions, please consult 
+the Rexx/SQL documentation at:
+
+    http://www.lightlink.com/hessling/rexxsql.html
+    
+Not all methods and/or classes are included here. For more detailed 
+information on the ORexx/SQL Object Framework classes, consult the 
+ORexx/SQL Object Framework Class Reference (ClassRef).
+
+Parameters in square brackets ( '[' & ']' ) are optional.
+
+
+ + .SQLConnection methods
+ 
+   Instances of this class are used to manage SQL database connections. 
+
+   - New(userName, password[, database, host, deferOpeningTheConnection])
+     - Returns a SQLConnection object.
+
+   - MakeDefault
+
+   - Command(sqlStatment)
+
+   - CommandWithBind(sqlStatement, bindDataTypes., bindValues.)
+
+   - Commit
+
+   - Rollback
+       
+
+ + .SQLTable
+ 
+   Instances of this class are used to represent database tables in your
+   applications.
+
+   - New(aSQLConnection, aTableName)
+     - Returns a SQLTable object.
+
+   - Insert(StemOfColumnIndexedValues.)
+
+   - Update(StemOfColumnIndexedValues., updateCondition)
+
+        Note: an updateCondition of 'ALL' must be used to update
+              all rows of a table.
+
+   - Delete(deleteCondition)
+ 
+        Note: an deleteCondition of 'ALL' must be used to delete
+              all rows of a table.
+       
+
+ + .SQLResultTable
+ 
+   Instances of this class are used to represent database queries in 
+   your applications. 
+   
+   - New(aSQLConnection, selectStatement)
+     - Returns a SQLResultTable object.
+
+   - Open
+
+   - OpenWithBind(bindDataTypes., bindValues.)
+
+   - Close
+
+   - ReOpen
+
+   - Fetch
+     - Returns a Stem object indexed by column name.
+
+   - FetchRowSet([numberOfRowsToFetch])
+     - Returns an Array of Stem objects indexed by column name.
+       
+
+ + .SQLStream
+ 
+   Instances of this class are used to represent database streams. 
+
+   - New(userID, password[, database, host])
+     - Returns a SQLStream object
+
+   - ArrayIn([numberOfRowsToReturn, selectStmt])
+     - Returns an array of stems (rows), indexed by column name 
+
+   - ArrayOut(theTableName, anArrayOfColumnIndexedStems)
+
+   - Close
+   
+   - Command(sqlStatement)
+
+   - Commit
+   
+   - In
+   
+   - MakeArray([numberOfRowsToReturn, selectStmt])
+
+   - Open(["AUTOCOMMIT"])
+
+   - Out("QUERY", selectStatement)            
+     Out("INSERT", aTableName, StemOfColumnIndexedValues.)            
+     Out("UPDATE", aTableName, StemOfColumnIndexedValues., updateCondition)            
+     Out("DELETE", aTableName, updateCondition)            
+
+   - Rewind
+   
+   - Rollback
+   
+   - Supplier
+     - Returns a supplier object for the stream.
+            
+
+ + .SQLStreamSupplier
+ 
+   Instances of this class are created and returned by the SQLStream
+   Supplier method.  
+
+   - Available
+     - Returns 1 if an item is available from the supplier. Returns 0 
+
+   - Index
+    - Returns the index of the current item.
+    
+   - Item
+     - Returns the current item a Stem object, indexed by column name.         
+
+   - Next
+   

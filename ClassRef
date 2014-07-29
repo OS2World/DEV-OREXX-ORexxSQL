@@ -1,0 +1,905 @@
+                          ORexx/SQL Object Framework
+                    Copyright (C) 1997 - 1998, John Blumel.
+                   -----------------------------------------
+		
+                                
++ The ORexx/SQL Object Framework class reference
+
+The following diagram shows the structure of the ORexx/SQL Object class
+hierarchy:
+
+       Classes                            
+    +----------------------------------------------------------+
+    |                                                          |
+    |  SQLObject                                               |
+    |  | | |                                                   |
+    |  | | |__ SQLConnection                                   |
+    |  | |     |                                               |
+    |  | |     |__ SQLStream                                   |
+    |  | |                                                     |
+    |  | |____ SQLWorkArea                                     |
+    |  |       | |                                             |
+    |  |       | |__ SQLTable                                  |
+    |  |       |                                               |
+    |  |       |____ SQLResultTable                            |
+    |  |                                                       |
+    |  |______ SQLStreamSupplier                               |
+    |                                                          |
+    |                                                          |
+    |  SQLError - error handling routine                       |
+    |                                                          |
+    +----------------------------------------------------------+
+    
+The ORexx/SQL Object Framework class interfaces are described below. For 
+information on specific Rexx/SQL variables and functions, please consult 
+the Rexx/SQL documentation at:
+
+    http://www.lightlink.com/hessling/rexxsql.html
+________________________________________________________________________________
+
++ Commonly Used Terms
+
+ - Stem Objects
+
+   A Stem object is essentially the Object Rexx version of a Rexx compound
+   variable. Compound variables are composed of two parts -- the 'stem' which
+   is a variable name ending in a period and the 'tail' which is appended to
+   the stem. For example 'myStem.theTail' is a Rexx compound variable where
+   the stem is 'myStem.' and the tail is 'theTail'. 
+
+   Stems are often used to create Rexx arrays which consist of compound 
+   variables whose tails are successive integers beginning with '1'. The tail 
+   '0' is reserved to store the number of items in the array.
+
+      Example:
+           
+         myArray.1 = 'blah 1'
+         myArray.2 = 'blah 2'
+         myArray.3 = 'blah 3'
+         myArray.0 = 3
+
+   In Object Rexx the 'DO OVER' variant of the DO keyword allows one to 
+   iterate over all of the variables of a stem without knowledge of the tails
+   assigned to the stem. This allows you to define and easily iterate over 
+   stem objects (stem arrays) which can have tails that are values other than 
+   integers. In Object Rexx, the tails of Stem objects are also known as 
+   indices. More information on Stem objects and compound variables can be
+   found in the Object Rexx Reference and the Object Rexx Programming Guide
+
+
+ - Stem Objects Indexed by Column Name
+     
+   Several of the ORexx/SQL Object classes define methods which take as an
+   argument or return "a Stem object indexed by column name." This refers to
+   a Stem object consisting of a stem whose indices (tails) are the names of 
+   database columns. For example, if you have a table with the following 
+   columns:
+
+       emp_id, emp_name, salary, dept_no
+
+   You could construct the following stem object using the column names as
+   tails or indices:
+
+       row.emp_id = 1
+       row.emp_name = "'Joe Bloggs'"
+       row.salary = 256.66
+       row.dept_no = 23
+
+
+ - Accessor Methods
+
+   These methods, usually listed at the end of the list of a class's methods
+   and indicated by the heading "** Accessor Methods **" allow you to obtain
+   and set the values of an objects instance variables. For example, the 
+   methods,
+
+       ::METHOD AutoCommit
+       ::METHOD AutoCommit=
+
+   allow you to retrieve and set the value of a SQLConnection's auto commit
+   status. You can use them in assignment statements as follows:
+
+       autoCommit = someObject~AutoCommit   /* Sets variable 'autoCommit'
+                                               to the value of someObject's
+                                               auto commit status, 1 if it
+                                               is in effect or 0 if not. 
+                                            */
+
+       someObject~AutoCommit = 1            /* Sets someObject's auto commit
+                                               status to 1 (or on). This is 
+                                               the same as:
+
+                                                someObject~"AutoCommit="(1) 
+                                            */
+
+   Not all values which can be retrieved via an accessor method have a 
+   corresponding method which allows you to set the value (i.e., some values
+   are read only).
+
+________________________________________________________________________________
+________________________________________________________________________________
+    
++ The SQLObject Classes
+
+ - SQLObject (subclasses the ORexx Object class)
+ 
+   The SQLObject class is an abstract base class and you will not normally
+   instantiate objects of this class. It maintains a counter of object 
+   instantiations that is used to create unique connection nd statement 
+   identifiers.The SQLObject class implements the following methods:
+
+   ::METHOD Init CLASS
+     - Loads the Rexx/SQL library and initializes an instance counter.
+     - No Arguments
+
+   ::METHOD New
+     - Increments the instance count.
+
+   ::METHOD Instances
+     - Returns the instance count.
+     - No Arguments
+
+   ::METHOD UnInit CLASS
+     - Unloads the Rexx/SQL library.
+
+   ** Accessor Methods **
+   
+   ::METHOD Version
+     - Returns the current value of the Rexx/SQL 
+       VERSION variable.
+     - No Arguments
+
+________________________________________________________________________________
+
+ - .SQLConnection (subclasses the SQLObject class)
+ 
+   Instances of this class are used to manage SQL database connections.
+   SQLConnection objects always use standard placemarkers, thus, it is
+   recommended that you not change the Rexx/SQL STANDARDPALCEMARKERS variable.
+   It is also recommended that you do not use the ORexx/SQL Framework and
+   directly use the Rexx/SQL interface in the same program, otherwise,
+   unpredictable results may occur. The class implements the following methods:
+
+   ::METHOD Init
+     - This method is automatically invoked when the SQLConnection class
+       is sent a NEW message. A SQL connection is created using the 
+       arguments supplied with the new message NEW and the instance 
+       variables are initialized.
+     - Argument 1
+        User ID used to login to the database.
+     - Argument 2
+        Password used to login to the database.
+     - Argument 3 (optional)
+        The name of the database to login to.
+     - Argument 4 (optional)
+        The name of the database server.
+     - Argument 5 (optional)
+        Boolean value indicating whether to defer opening the connection
+
+   ::METHOD UnInit
+     - This method is automatically invoked when a SQLConnection object
+       is destroyed and the SQL connection is dropped.
+     - No Arguments.
+
+   ::METHOD Open
+     - This method opens a database connection.
+     - No Arguments.
+
+   ::METHOD Close
+     - Closes the database connection if one is open.
+     - No Arguments.
+
+   ::METHOD MakeDefault
+     - This method is used to set the connection object as the default
+       connection. The MakeDefault is primarily used by the SQLTable &
+       SQLResultTable classes and you should normally not need to
+       invoke this method.
+     - No Arguments.
+
+   ::METHOD Command
+     - Used to immediately run a SQL statement. This method is intended to
+       primarily support DDL statements and the return of result rows is
+       not supported. (It is intended that SQLTable & SQLResulTable objects
+       be used for DML statements.)
+     - Argument 1
+        Any valid SQL statement.
+
+   ::METHOD CommandWithBind
+     - Performs the same function as the Command method but allows use of
+       bind values with the SQL statment.
+     - Argument 1
+        Any valid SQL statement.
+     - Argument 2
+        A Stem object containing the bind data types.
+     - Argument 3
+        A Stem object containing the bind values.
+
+   ::METHOD Commit
+     - Invoking this method commits the current transaction.
+     - No Arguments.
+
+   ::METHOD Rollback
+     - Invoking this method rolls back the current transaction.
+     - No Arguments.
+
+   ** Accessor Methods **
+
+   ::METHOD LongLimit
+     - Returns the current value of the Rexx/SQL LONGLIMIT       
+       variable for this connection.                                        
+     - No Arguments.                                                        
+
+   ::METHOD LongLimit=
+     - Set the value of the Rexx/SQL LONGLIMIT variable for 
+       this connection.                                        
+     - Argument 1                                                        
+        The number of bytes retrieved by a SELECT statement that
+        returns a Long data type. Defaults to 32768.
+
+   ::METHOD SaveSQL
+     - Returns the current value of the Rexx/SQL SAVESQL       
+       variable for this connection.                                        
+     - No Arguments.                                                        
+
+   ::METHOD SaveSQL=
+     - Set the value of the Rexx/SQL SAVESQL variable for 
+       this connection.                                        
+     - Argument 1                                                        
+        0 = disable
+        1 = enable (default)
+
+   ::METHOD AutoCommit
+     - Returns the current value of the Rexx/SQL AUTOCOMMIT       
+       variable for this connection.                                        
+     - No Arguments.                                                        
+
+   ::METHOD AutoCommit=
+     - Set the value of the Rexx/SQL AUTOCOMMIT variable for 
+       this connection.                                        
+     - Argument 1                                                        
+        0 = disable (default)
+        1 = enable
+
+   ::METHOD IgnoreTruncate
+     - Returns the current value of the Rexx/SQL IGNORETRUNCATE       
+       variable for this connection.                                        
+     - No Arguments.                                                        
+
+   ::METHOD IgnoreTruncate=
+     - Set the value of the Rexx/SQL IGNORETRUNCATE variable for 
+       this connection.                                        
+     - Argument 1                                                        
+        0 = disable (default)
+        1 = enable
+
+   ::METHOD NullStringOut
+     - Returns the current value of the Rexx/SQL NULLSTRINGOUT       
+       variable for this connection.                                        
+     - No Arguments.                                                        
+
+   ::METHOD NullStringOut=
+     - Set the value of the Rexx/SQL NULLSTRINGOUT variable for 
+       this connection.                                        
+     - Argument 1                                                        
+        A string value. Defaults to '<null>'
+
+   ::METHOD NullStringIn
+     - Returns the current value of the Rexx/SQL NULLSTRINGIN       
+       variable for this connection.                                        
+     - No Arguments.                                                        
+
+   ::METHOD NullStringIn=
+     - Set the value of the Rexx/SQL NULLSTRINGIN variable for 
+       this connection.                                        
+     - Argument 1                                                        
+        A string value. Defaults to '<null>'
+
+   ::METHOD DebugLevel
+     - Returns the current value of the Rexx/SQL DEBUG       
+       variable for this connection.                                        
+     - No Arguments.                                                        
+
+   ::METHOD DebugLevel=
+     - Set the value of the Rexx/SQL DEBUG variable for 
+       this connection.                                        
+     - Argument 1                                                        
+        0 = Debugging off. (default)
+        1 = REXX variables displayed as set.
+        2 = Function entry/exit information displayed.
+        3 = Both level 1 & 2 debugging information displayed.
+
+   ::METHOD State
+     - Returns the SQLCA. object
+     - No Arguments.
+
+   ::METHOD SupportsPlacemarkers
+     - Returns the current value of the Rexx/SQL SUPPORTSPLACEMARKERS       
+       variable for this connection.                                        
+     - No Arguments.                                                        
+
+   ::METHOD SupportsDMLRowCount                                             
+     - Returns the current value of the Rexx/SQL SUPPORTSDMLROWCOUNT        
+       variable.                                                            
+     - No Arguments.                                                        
+
+   ::METHOD DataTypes                                                       
+     - Returns a Stem object containing the data types appropriate for the  
+       database.                                                            
+     - No Arguments.                                                        
+
+   ::METHOD ColumnAttributes                                                
+     - Returns a Stem object containing the column attributes appropriate    
+       for the database.                                                    
+     - No Arguments.                                                        
+
+   ::METHOD SupportsTransactions                                            
+     - Returns                                                              
+        0 = The database does not support transactions.                     
+        1 = The database supports transactions.                             
+     - No Arguments.                                                        
+
+   ::METHOD SupportsGetColumnData                                           
+     - Returns                                                              
+        0 = The database does not support the SQLResultTable                
+            GetLongColumnData & WriteLongColumnToFile methods.              
+        1 = The database does support the SQLResultTable                    
+            GetLongColumnData & WriteLongColumnToFile methods.              
+     - No Arguments.                                                        
+
+   ::METHOD DBMSName                                                        
+     - Returns the name of the database to which the SQLConnection object   
+       is connected.                                                        
+     - No Arguments.                                                        
+ 
+   ** Inherited from SQLObject **
+  
+   ::METHOD Version
+       
+________________________________________________________________________________
+
+ - .SQLWorkArea (subclasses the SQLObject class)
+ 
+   Instances of this class are used to create SQL work areas in your
+   applications. The class implements the following methods:
+
+   ::METHOD Init                                                            
+     - Initializes the SQLWorkArea object. If no connection object is
+       supplied as an argument, an exception will be raised          
+     - Argument 1                                                           
+        A SQLConnection object.                                             
+
+   ::METHOD UnInit                                                          
+     - This method is automatically invoked when a SQLWorkArea object       
+       is destroyed.                                                        
+     - No Arguments.                                                        
+
+   ::METHOD Prepare                                                         
+     - Prepares a SQL statement for processing.                             
+     - Argument 1                                                           
+        A valid SQL statement.                                              
+
+   ::METHOD Execute                                                         
+     - Executes a previously Prepared non-Select SQL statement.             
+     - No Arguments.                                                        
+
+   ::METHOD ExecuteWithBind                                                 
+     - Executes a previously Prepared non-Select SQL statement using bind   
+       values.                                                              
+     - Argument 1                                                           
+        A Stem object containing the bind data types.                       
+     - Argument 2                                                           
+        A Stem object containing the bind values.                           
+
+   ::METHOD Dispose                                                         
+     - Drops a previously Prepared SQL statement.                           
+     - No Arguments.                                                        
+
+   ** Accessor Methods **
+
+   ::METHOD Statement                                                       
+     - Returns the currently active SQL statement.                          
+     - No arguments.                                                        
+ 
+   ** Inherited from SQLObject **
+  
+   ::METHOD Version
+       
+________________________________________________________________________________
+
+ - .SQLTable (subclasses the SQLWorkArea class)
+ 
+   Instances of this class are used to represent database tables in your
+   applications. The class implements the following methods:
+
+   ::METHOD Init CLASS                                                      
+     - Removes the ExecuteWithBind method inherited from SQLWorkArea.                                                     
+
+   ::METHOD Init                                                            
+     - This method is automatically invoked when the SQLTable class is      
+       sent a NEW message. Both arguments are required. If either is 
+       omitted, an exception will be raised.                              
+     - Argument 1                                                           
+        A SQLConnection object.                                             
+     - Argument 2                                                           
+        The name of the database table.                                     
+
+   ::METHOD Insert                                                          
+     - Use this method to insert a row into the table.                      
+     - Argument 1                                                           
+        A Stem, indexed by column name, containing the values to be         
+        inserted.                                                           
+		
+   ::METHOD Update                                                          
+     - Use this method to update an existing table row or rows.             
+     - Argument 1                                                           
+        A Stem, indexed by column name, containing the new column values    
+     - Argument 2                                                           
+        A string specifying the value for the UPDATE's WHERE clause.        
+                                                                            
+     	Note: A condition of 'ALL' must be used to update                  
+     	      all rows of a table.                                          
+
+   ::METHOD Delete                                                          
+     - Use this method to delete an existing table row or rows.             
+     - Argument 1                                                           
+        A string specifying the value for the DELETE's WHERE clause.        
+                                                                            
+    	Note: A condition of 'ALL' must be used to delete                  
+    	      all rows of a table.                                          
+
+   ** Accessor Methods **
+
+   ::METHOD TableName                                                       
+     - Returns the name of the database table the object represents         
+     - No Arguments.                                                        	
+ 
+   ** Inherited from SQLWorkArea **
+
+   ::METHOD UnInit                                                          
+   ::METHOD Prepare                                                         
+   ::METHOD Execute                                                         
+   ::METHOD Dispose                                                         
+   ::METHOD Statement                                                       
+   ::METHOD Version
+       
+________________________________________________________________________________
+
+ - .SQLResultTable (subclasses the SQLWorkArea class)
+ 
+   Instances of this class are used to represent database queries in your
+   applications. In addition to the methods inherited from the SQLTable 
+   class, this class implements, or overrides, the following methods:
+
+   ::METHOD Init CLASS                                                      
+     - Removes the Execute & ExecuteWithBind methods inherited from
+       SQLWorkArea.                                                     
+
+   ::METHOD Init                                                            
+     - This method is automatically invoked when the SQLResultTable class   
+       is sent a NEW message. The SELECT statement provided will be         
+       prepared and the result table will be ready for opening. Both 
+       arguments are required, if either is omitted, an exception will be
+       raised.            
+     - Argument 1                                                           
+        A SQLConnection object.                                             
+     - Argument 2                                                           
+        A valid SELECT statement.                                           
+
+   ::METHOD Open                                                            
+     - Use this method to open the SQLResultTable.                          
+     - No Arguments.                                                        
+
+   ::METHOD OpenWithBind                                                    
+     - Use this method to open the SQLResultTable and supply bind values    
+       for the SELECT statement.                                            
+     - Argument 1                                                           
+        A Stem object containing the bind data types.                       
+     - Argument 2                                                           
+        A Stem object containing the bind values.                           
+
+   ::METHOD Close                                                           
+     - Use this method to close the SQLResultTable.                         
+     - No Arguments.                                                        
+
+   ::METHOD ReOpen                                                          
+     - Use this method to close and then re-open a SQLResultTable.          
+       If the SQLResultTable was opened with bind values, the same values   
+       will be used to re-open it.                                          
+     - No Arguments.                                                        
+
+   ::METHOD Fetch                                                           
+     - Use this method to fetch the next available row from the             
+       SQLResultTable. The row is returned in a Stem object indexed by      
+       column name.                                                         
+     - No Arguments.                                                        
+
+   ::METHOD FetchRowSet                                                     
+     - Use this method to fetch multiple rows from the SQLResultTable.      
+       The rows are returned as an Array of Stem objects indexed by         
+       column name.                                                         
+     - Argument 1 (optional)                                               
+        An integer specifying the number of rows to fetch. This             
+        parameter is optional and ommitting it or specifying a value of     
+        0 will result in all remaining (i.e., yet unfetched) rows being     
+        returned.                                                           
+
+   ::METHOD GetLongColumnData                                                   
+     - This method returns part (or all) of a column from the               
+       current fetched row.                                                 
+     - Argument 1                                                           
+        The name of the column.                                             
+     - Argument 2                                                           
+        The, 1 based, starting byte from which to retrieve data.            
+     - Argument 3                                                           
+        The number of bytes to retrieve.                                    
+
+   ::METHOD WriteLongColumnToFile                                               
+     - Use this method to write a column, from the current fetched row,     
+       to an operating system file. The number of bytes written is          
+       returned.                                                            
+     - Argument 1                                                           
+        The name of the column.                                             
+     - Argument 2                                                           
+        The name of the file to which the data should be written.           
+
+   ::METHOD Describe                                                        
+     - This method returns a Stem object containing information             
+       describing the SQLResultTable. For a description of the Stem         
+       object returned, see the Rexx/SQL documentation for the              
+       SQLDescribe() function.                                              
+     - No arguments.                                                        
+
+   ** Inherited from SQLWorkArea **
+
+   ::METHOD UnInit                                                          
+   ::METHOD Prepare                                                         
+   ::METHOD Dispose                                                         
+   ::METHOD Statement                                                       
+   ::METHOD Version
+
+________________________________________________________________________________
+
+ - .SQLStream (subclasses the SQLConnection class)
+ 
+   Instances of this class are used to represent database streams. SQLStream
+   manages its own SQLConnection, SQLTable & SQLResultTable objects and
+   provides and interface similar to the standard Stream class
+
+   ::METHOD Init                                                            
+     - Initializes the SQLStream object                                     
+     - Argument 1                                                           
+        User ID used to login to the database.                              
+     - Argument 2                                                           
+        Password used to login to the database.                             
+     - Argument 3                                                           
+        The name of the database to login to.                               
+     - Argument 4                                                           
+        The name of the database server.                                    
+ 
+   ::METHOD UnInit
+     - This method is automatically invoked when a SQLConnection object
+       is destroyed and the SQL connection is dropped.
+     - No Arguments.
+       
+   ::METHOD ArrayIn                                                         
+     - Returns an array of stems, indexed by column name, from the          
+       specified input stream or. If no input stream is specified, the      
+       current stream is used. If no input stream is defined, the NIL       
+       object is returned.                                                  
+     - Argument 1 (optional)                                                
+        The maximum number of rows to return from the stream.               
+     - Argument 2 (optional)                                                
+        A valid SELECT statement which will be used to initialize the       
+        input stream.                                                       
+
+   ::METHOD ArrayOut                                                        
+     - Appends the array contents to the output stream.                     
+     - Argument 1                                                           
+        A database table name which is used to define the output stream.    
+     - Argument 2                                                           
+        An array of Stem objects, indexed by column name, containing the    
+        the column values to be written to the output stream.               
+
+   ::METHOD Close                                                           
+     - Closes the stream.                                                   
+     - No Arguments.                                                        
+
+   ::METHOD LongColumnIn                                                        
+     - Used in conjunction with the In method, this method will return      
+       all or part of a column from the row last accessed by the In method. 
+     - Argument 1                                                           
+        The name of the column.                                             
+     - Argument 2                                                           
+        The, 1 based, starting byte from which to retrieve data.            
+     - Argument 3                                                           
+        The number of bytes to retrieve.                                    
+
+   ::METHOD LongColumnToFile                                                    
+     - Used in conjunction with the In method, this method will write a column 
+       from the row last accessed by the In method to an operating system file.                                            
+     - Argument 1                                                           
+        The name of the column.                                             
+     - Argument 2                                                           
+        The name of the file to which the data should be written.           
+
+   ::METHOD Command                                                         
+     - Used to immediately run a SQL statement. This method is intended to  
+       primarily support DDL statements and the return of result rows is    
+       not supported.                                                       
+     - Argument 1                                                           
+        Any valid SQL statement.                                            
+
+   ::METHOD CommandWithBind
+     - Performs the same function as the Command method but allows use of
+       bind values with the SQL statment.
+     - Argument 1
+        Any valid SQL statement.
+     - Argument 2
+        A Stem object containing the bind data types.
+     - Argument 3
+        A Stem object containing the bind values.
+
+   ::METHOD Commit                                                          
+     - Invoking this method commits the current transaction.                
+     - No Arguments.                                                        
+
+   ::METHOD In                                                              
+     - Returns the next available row from the input stream as a Stem       
+       object indexed by column name.                                       
+     - No Arguments.                                                        
+
+   ::METHOD MakeArray                                                       
+     - Returns an array of stems, indexed by column name, from the          
+       specified input stream or. If no input stream is specified, the      
+       current stream is used. If no input stream is defined, the NIL       
+       object is returned.                                                  
+     - Argument 1 (optional)                                                
+        The maximum number of rows to return from the stream.               
+     - Argument 2 (optional)                                                
+        A valid SELECT statement which will be used to initialize the       
+        input stream.                                                       
+
+   ::METHOD Open                                                            
+     - Opens the stream.                                                    
+     - Arguments 1 (optional)                                               
+        The value 'AUTOCOMMIT'. If supplied values written to the ouput     
+        will be committed automatically.                                    
+
+   ::METHOD Out                                                             
+     - Writes data or queries to the output stream                          
+     - Argument 1 -- the Arguments vary depending on the value of the       
+       first argumentwhich can be one of the following literal values:      
+                                                                            
+       QUERY                                                                
+       - Argument 2                                                         
+          A valid SELECT statement.                                         
+                                                                            
+       INSERT                                                               
+       - Argument 2                                                         
+          A database table name.                                            
+       - Argument 3                                                         
+          A Stem object, indexed by column name, containing the values      
+          to be inserted.                                                   
+                                                                            
+       UPDATE                                                               
+       - Argument 2                                                         
+          A database table name.                                            
+       - Argument 3                                                         
+          A Stem object, indexed by column name, containing the values      
+          to be inserted.                                                   
+       - Argument 4                                                         
+          A string specifying the value for the UPDATE's WHERE clause.      
+                                                                            
+          Note: A condition of 'ALL' must be used to update                
+                all rows of a table.                                        
+                                                                            
+       DELETE                                                               
+       - Argument 2                                                         
+          A database table name.                                            
+       - Argument 3                                                         
+          A string specifying the value for the DELETE's WHERE clause.      
+                                                                            
+          Note: A condition of 'ALL' must be used to delete                
+                all rows of a table.                                        
+
+   ::METHOD Qualify                                                         
+     - Returns the qualified stream name which consists of the following    
+       colon (':') separated values:                                        
+    		                                                                
+                   DBMSName:HostName:Database Name                        
+                                                                            
+     - No Arguments.                                                        
+
+   ::METHOD Query                                                           
+     - Used with the options which can be specified for Argument 1, this    
+       method returns specific information about a SQLStream.               
+     - Argument 1.                                                          
+        One of the following options:                                       
+                                                                            
+        LONGLIMIT                                                           
+          When this option is used the value of the Rexx/SQL variable       
+          LONGLIMIT for this stream will be returned.                       
+                                                                            
+        SAVESQL                                                             
+          When this option is used the value of the Rexx/SQL variable       
+          SAVESQL for this stream will be returned.                         
+                                                                            
+        AUTOCOMMIT                                                          
+          When this option is used the value of the Rexx/SQL variable       
+          AUTOCOMMIT for this stream will be returned.                      
+                                                                            
+        IGNORETRUNCATE                                                      
+          When this option is used the value of the Rexx/SQL variable       
+          IGNORETRUNCATE for this stream will be returned.                  
+                                                                            
+        NULLSTRINGOUT                                                       
+          When this option is used the value of the Rexx/SQL variable       
+          NULLSTRINGOUT for this stream will be returned.                   
+                                                                            
+        NULLSTRINGIN                                                        
+          When this option is used the value of the Rexx/SQL variable       
+          NULLSTRINGIN for this stream will be returned.                    
+                                                                            
+        DEBUGLEVEL                                                          
+          When this option is used the value of the Rexx/SQL variable       
+          DEBUG for this stream will be returned.                           
+                                                                            
+        SUPPORTSPLACEMARKERS                                                
+          When this option is used the value of the Rexx/SQL variable       
+          SUPPORTSPLACEMARKERS for this stream will be returned.            
+ 
+        SUPPORTSDMLROWCOUNT                                                 
+          When this option is used the value of the Rexx/SQL variable       
+          SUPPORTSDMLROWCOUNT for this stream will be returned.             
+                                                                            
+        VERSION                                                             
+          When this option is used the value of the Rexx/SQL variable       
+          VERSION for this stream will be returned.                         
+                                                                            
+        DATATYPES                                                           
+          Returns a Stem object containing the data types appropriate       
+          for the database.                                                 
+                                                                            
+        COLUMNATTRIBUTES                                                    
+          Returns a Stem object containing the column attributes            
+          appropriate for the database.                                     
+                                                                            
+        SUPPORTSTRANSACTIONS                                                
+          Returns                                                           
+           0 = The database does not support transactions.                  
+           1 = The database supports transactions.                          
+                                                                            
+        SUPPORTSGETCOLUMNDATA                                               
+          Returns                                                           
+           0 = The database does not support the SQLResultTable             
+               GetLongColumnData & WriteLongColumnToFile methods.           
+           1 = The database does support the SQLResultTable                 
+               GetLongColumnData & WriteLongColumnToFile methods.           
+                                                                            
+        DBMSNAME                                                            
+          Returns the name of the database to which the SQLStream object    
+          is connected.                                                     
+                                                                            
+        STATE                                                               
+          Returns the current value of SQLCA.                               
+                                                                            
+        OUTSTATEMENT                                                        
+          Returns the last active SQL statement for the output stream,      
+          if any.                                                           
+                                                                            
+        INSTATEMENT                                                         
+          Returns the last active SQL statement for the input stream,       
+          if any.                                                           
+                                                                            
+        TABLENAME                                                           
+          Returns the last active database table for the output stream,     
+          if any.                                                           
+                                                                            
+        DESCRIBE                                                            
+          Returns a Stem object containing information describing the       
+          data available from the currently active input stream, if any.    
+          For a description of the Stem  object returned, see the           
+          Rexx/SQL documentation for the SQLDescribe() function.            
+
+   ::METHOD Rewind                                                          
+     - Returns.                                                             
+     - Arguments.                                                           
+
+   ::METHOD Rollback                                                        
+     - Invoking this method rolls back the current transaction.             
+     - No Arguments.                                                        
+
+   ::METHOD Supplier                                                        
+     - Returns a supplier object for the stream.                            
+     - Argument 1 (optional)                                                
+        A valid SELECT statement which will be used to initialize the       
+        input stream.                                                       
+ 
+   ** Inherited from SQLConnection **
+
+   ::METHOD MakeDefault (not normally used by clients of SQLStream objects)
+   ::METHOD LongLimit
+   ::METHOD LongLimit=
+   ::METHOD SaveSQL
+   ::METHOD SaveSQL=
+   ::METHOD AutoCommit
+   ::METHOD AutoCommit=
+   ::METHOD IgnoreTruncate
+   ::METHOD IgnoreTruncate=
+   ::METHOD NullStringOut
+   ::METHOD NullStringOut=
+   ::METHOD NullStringIn
+   ::METHOD NullStringIn=
+   ::METHOD StandardPlacemarkers
+   ::METHOD StandardPlacemarkers=
+   ::METHOD DebugLevel
+   ::METHOD DebugLevel=
+   ::METHOD State
+   ::METHOD SupportsPlacemarkers
+   ::METHOD SupportsDMLRowCount                                             
+   ::METHOD DataTypes                                                       
+   ::METHOD ColumnAttributes                                                
+   ::METHOD SupportsTransactions                                            
+   ::METHOD SupportsGetColumnData                                           
+   ::METHOD DBMSName                                                        
+   ::METHOD Version
+
+________________________________________________________________________________
+
+ - .SQLStreamSupplier (subclasses the SQLObject class)
+
+   ::METHOD Init                                                            
+     - initializes the supplier object with the contents of the input       
+       stream of the SQLStream object it is being created for.              
+     - Argument 1                                                           
+        A SQLStream object with a defined input stream.                     
+     - Argument 2 (optional)                                                
+        A valid SELECT statement which will be used to initialize the       
+        input stream.                                                       
+
+   ::METHOD Available                                                       
+     - Returns 1 if an item is available from the supplier. Returns 0       
+       otherwise.                                                           
+     - No Arguments.                                                        
+
+   ::METHOD Index                                                           
+     - Returns the index of the current item.                               
+     - No Arguments.                                                        
+
+   ::METHOD Item                                                            
+     - Returns the current item. For SQLSteamSupplier objects, this is a    
+       Stem object, indexed by column name.                                 
+     - No Arguments.                                                        
+
+   ::METHOD Next                                                            
+     - Moves to the next item in the supplier object.                       
+     - No Arguments.                                                        
+ 
+   ** Inherited from SQLObject **
+  
+   ::METHOD Version
+      
+________________________________________________________________________________
+
+ - ::ROUTINE SQLError
+ 
+   This routine is used to perform exception handling for the ORexx/SQL
+   Object Framework. It takes a single parameter which is a Condition 
+   object. You must enable exception handling by inserting the following
+   code at the beginning of your ORexx program:
+
+       signal on ERROR
+       call on USER SQLError NAME SQLException
+
+   and the following line at the end of your ORexx program, before any
+   directives
+
+       SQLException: call SQLError Condition("O")
+
+   If you wish to override the included exception handling, you can 
+   modify this "SQLException" routine to perform whatever processing you
+   wish to occur. Errors which occur in object Init methods will, however, 
+   continue to be handled by the ::ROUTINE defined in the 'SQLError.rtn'
+   file. You will have to modify this routine if you wish to override all 
+   exception handling.
+
